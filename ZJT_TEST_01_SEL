@@ -1,0 +1,6 @@
+*&---------------------------------------------------------------------*
+*&  Include           ZJT_TEST_01_SEL
+*&---------------------------------------------------------------------*
+SELECTION-SCREEN BEGIN OF BLOCK b1 WITH FRAME TITLE text-000.
+  PARAMETERS: p_test(40) TYPE c VISIBLE LENGTH 20.
+SELECTION-SCREEN END OF BLOCK b1.
