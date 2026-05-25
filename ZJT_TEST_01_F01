@@ -1,0 +1,235 @@
+*&----------------------------------------------------------------------*
+*&  Include           ZJT_TEST_01_F01
+*&----------------------------------------------------------------------*
+*-----------------------------------------------------------------------*
+*                 CLASS - DEFINITION                                    *
+*-----------------------------------------------------------------------*
+*-----------------------------------------------------------------------*
+* Main Program Class
+*-----------------------------------------------------------------------*
+CLASS lcl_main DEFINITION.
+  PUBLIC SECTION.
+
+    METHODS:
+      constructor,
+      exec
+        IMPORTING
+          im_c  TYPE char40
+          im_ra TYPE REF TO data OPTIONAL
+          im_rb TYPE REF TO data OPTIONAL
+          im_rc TYPE REF TO data OPTIONAL
+        RETURNING
+          value(re_rc) TYPE sy-subrc,
+      selection
+        IMPORTING
+          im_ra TYPE REF TO data OPTIONAL
+        RETURNING
+          value(re_rc) TYPE sy-subrc,
+      get
+        IMPORTING
+          im_ra TYPE REF TO data OPTIONAL
+        RETURNING
+          value(re_rc) TYPE sy-subrc,
+      process
+        IMPORTING
+          im_ra TYPE REF TO data OPTIONAL
+        RETURNING
+          value(re_rc) TYPE sy-subrc,
+      display
+        IMPORTING
+          im_ra TYPE REF TO data OPTIONAL
+        RETURNING
+          value(re_rc) TYPE sy-subrc,
+      free.
+
+  PRIVATE SECTION.
+    DATA lo_cont TYPE REF TO cl_gui_custom_container.
+    DATA lo_tree TYPE REF TO cl_gui_simple_tree.
+    DATA lt_nodes TYPE TABLE OF mtreesnode.
+    DATA ls_node  TYPE mtreesnode.
+    DATA lt_tree TYPE /next/ttree.
+
+    METHODS:
+      create_tree,
+      build_nodes.
+
+ENDCLASS.                    "lcl_main DEFINITION
+*-----------------------------------------------------------------------*
+*                  CLASS IMPLEMENTATION                                 *
+*-----------------------------------------------------------------------*
+*-----------------------------------------------------------------------*
+* Main Program Class Implementation
+*-----------------------------------------------------------------------*
+CLASS lcl_main IMPLEMENTATION.
+*-----------------------------------------------------------------------*
+* Constructor
+*-----------------------------------------------------------------------*
+  METHOD constructor.
+  ENDMETHOD.                    "constructor
+*-----------------------------------------------------------------------*
+* Execute
+*-----------------------------------------------------------------------*
+  METHOD exec.
+
+    CASE im_c.
+      WHEN 'GET'.
+        re_rc = get( ).
+      WHEN 'PROCESS'.
+        re_rc = process( ).
+      WHEN 'DISPLAY'.
+        re_rc = display( ).
+      WHEN 'SELECTION'.
+        re_rc = selection( ).
+
+      WHEN OTHERS.
+    ENDCASE.
+
+  ENDMETHOD.                    "exec
+*-----------------------------------------------------------------------*
+* Selection
+*-----------------------------------------------------------------------*
+  METHOD selection.
+    re_rc = 4.
+
+    CASE sy-ucomm.
+      WHEN 'ONLI'.
+      WHEN OTHERS.
+    ENDCASE.
+
+    re_rc = 0.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Get
+*-----------------------------------------------------------------------*
+  METHOD get.
+    re_rc = 4.
+
+    lt_tree = VALUE #( BASE lt_tree
+      ( key = 'ROOT' top = ''     exp = 'X' txt = 'Root' )
+    ).
+
+   lt_tree = VALUE #( BASE lt_tree
+      ( key = '0100' top = 'ROOT' exp = 'X' txt = 'Sub 1' )
+      ( key = '0101' top = '0100' exp = ''  txt = 'Item 1' )
+      ( key = '0102' top = '0100' exp = ''  txt = 'Item 2' )
+    ).
+
+    lt_tree = VALUE #( BASE lt_tree
+      ( key = '0200' top = 'ROOT' exp = 'X' txt = 'Sub 2' )
+      ( key = '0201' top = '0200' exp = ''  txt = 'Item 3' )
+    ).
+
+    re_rc = 0.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Process
+*-----------------------------------------------------------------------*
+  METHOD process.
+    re_rc = 4.
+
+    re_rc = 0.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Display
+*-----------------------------------------------------------------------*
+  METHOD display.
+    re_rc = 4.
+
+
+    IF lo_cont IS INITIAL.
+      create_tree( ).
+    ENDIF.
+
+    CALL SCREEN 100.
+
+    re_rc = 0.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Free
+*-----------------------------------------------------------------------*
+  METHOD free.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Create Tree
+*-----------------------------------------------------------------------*
+  METHOD create_tree.
+    " Create container
+    CREATE OBJECT lo_cont
+      EXPORTING
+        container_name = 'CC1'
+      EXCEPTIONS
+        OTHERS = 1.
+
+    " Create tree
+    CREATE OBJECT lo_tree
+      EXPORTING
+        parent              = lo_cont
+        node_selection_mode = cl_gui_simple_tree=>node_sel_mode_single
+      EXCEPTIONS
+        OTHERS = 1.
+
+    " Build and populate tree
+    build_nodes( ).
+
+    CALL METHOD lo_tree->add_nodes
+      EXPORTING
+        table_structure_name = 'MTREESNODE'
+        node_table           = lt_nodes
+      EXCEPTIONS
+        OTHERS               = 1.
+
+    " Expand root
+    CALL METHOD lo_tree->expand_node
+      EXPORTING
+        node_key = 'ROOT'
+      EXCEPTIONS
+        OTHERS = 1.
+  ENDMETHOD.
+*-----------------------------------------------------------------------*
+* Build Nodes
+*-----------------------------------------------------------------------*
+  METHOD build_nodes.
+
+    REFRESH lt_nodes.
+
+    LOOP AT lt_tree INTO DATA(gs_tree).
+      CLEAR ls_node.
+      ls_node-node_key  = gs_tree-key.
+      ls_node-relatkey  = gs_tree-top.
+
+      ls_node-text      = gs_tree-txt.
+      ls_node-expander  = gs_tree-exp.
+
+      IF gs_tree-key <> 'ROOT'.
+        ls_node-relatship = cl_gui_simple_tree=>relat_last_child.
+      ENDIF.
+
+      IF gs_tree-key = 'SUB2' OR gs_tree-key = 'SUB2A' OR gs_tree-key = 'SUB1B'.
+        ls_node-n_image = icon_led_green.
+      ELSE.
+        ls_node-n_image = icon_led_red.
+      ENDIF.
+
+      APPEND ls_node TO lt_nodes.
+    ENDLOOP.
+  ENDMETHOD.
+ENDCLASS.
+*----------------------------------------------------------------------*
+* PBO Module
+*----------------------------------------------------------------------*
+MODULE status_0100 OUTPUT.
+  "Copy FG:KKBL GUI:STANDARD and use app toolbar as per requirement
+  SET PF-STATUS 'STANDARD'.
+  SET TITLEBAR 'TITLE'.
+ENDMODULE.
+*----------------------------------------------------------------------*
+* PAI Module
+*----------------------------------------------------------------------*
+MODULE user_command_0100 INPUT.
+  CASE sy-ucomm.
+    WHEN 'BACK' OR 'EXIT' OR 'CANCEL'.
+      go_main->free( ).
+      LEAVE TO SCREEN 0.
+    WHEN OTHERS.
+  ENDCASE.
+ENDMODULE.
